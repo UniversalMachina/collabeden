@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="stylesheet" href="styles.css">
+  <style>
+   
+      
+  </style>
+</head>
+
+<body>
+
+    <div class="main1">
+        <div class="chatlog">
+        </div>
+        <div id="optionButtons" class="optionButtons">
+
+        </div>
+        <div class="InputBox">
+
+            
+            <form id="messageForm">
+                <div>
+                    <textarea id="w3review"></textarea>
+                </div>
+                <div>
+                    <input type="submit" value="→" />
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            fetch('http://localhost:5000/get-start-message')
+                .then(response => response.json())
+                .then(data => {
+                    addNewMessage(data.message);
+                    updateOptionButtons(data.valid_responses);
+                })
+                .catch(error => console.error('Error:', error));
+        });
+        
+       
+        const form = document.getElementById('messageForm');
+        const chatlog = document.querySelector('.chatlog');
+        const textarea = document.getElementById('w3review');
+        const optionButtons = document.querySelectorAll('.optionButton');
+        const optionButtonsContainer = document.getElementById('optionButtons');
+        
+        function addNewMessage(text, sender) {
+            const newMessage = document.createElement('p');
+            newMessage.textContent = text;
+        
+            if (sender === 'user') {
+                newMessage.className = 'user-message';  // add class for user messages
+            }
+        
+            chatlog.appendChild(newMessage);
+        
+            // Add fade-in animation
+            newMessage.style.animation = "fadeIn 1s"; 
+        
+            // Scroll chatlog to bottom
+            chatlog.scrollTop = chatlog.scrollHeight;
+        }
+        
+        function hideButtons() {
+            optionButtonsContainer.style.visibility = 'hidden'; // hides all buttons
+        }
+        
+        function showButtons() {
+            optionButtonsContainer.style.visibility = 'visible'; // shows all buttons
+        }
+        
+        optionButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                addNewMessage(this.textContent);
+                textarea.value = '';
+                hideButtons();
+            });
+        });
+        
+
+        
+
+        let step = 1;
+
+        
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const text = textarea.value;
+            if (text) {
+                submitMessage(text);
+            }
+        });
+
+
+        function submitMessage(message) {
+            addNewMessage(message, 'user');
+            textarea.value = '';
+            hideButtons();
+            textarea.style.display = 'none';  // hides the input area while waiting for the server's response
+            fetch('http://localhost:5000/get-response', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({message: message, step: step})
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(step); // log current step value
+                addNewMessage(data.message);
+                step = data.step;
+                console.log(step); // log updated step value
+                textarea.style.display = 'block'; // shows the input area again after getting the server's response
+                updateOptionButtons(data.valid_responses);  // Update the text of option buttons based on valid responses received from the server
+            })
+            .catch(error => console.error('Error:', error));
+        }
+        
+        function updateOptionButtons(validResponses) {
+            // First, remove all current option buttons
+            while (optionButtonsContainer.firstChild) {
+                optionButtonsContainer.firstChild.remove();
+            }
+        
+            // Then, create and add new option buttons based on valid responses
+            validResponses.forEach((response, index) => {
+                const button = document.createElement('button');
+                button.textContent = response;
+                button.className = 'optionButton';
+                button.type = 'button';
+                button.addEventListener('click', function() {
+                    submitMessage(this.textContent);
+                });
+                optionButtonsContainer.appendChild(button);
+            });
+        }
+        
+
+        
+        
+      </script>
+</body>
+
+</html>
